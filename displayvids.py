@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import cv2 as cv
 import isstim
-
+import os
 
 class createDataset(Dataset):
     def __init__(self, data, labels):
@@ -86,58 +86,71 @@ fontscale = 1
 color= (0,0,0)
 thickness = 2
 
-
-cap = cv.VideoCapture('testvid2.mp4')
-fourcc = cv.VideoWriter_fourcc(*"XVID")
-fps = int(cap.get(cv.CAP_PROP_FPS))
-width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-writer = cv.VideoWriter('annotatedvid14.mp4', fourcc,fps, (width, height))
+count = 0
 
 
+stimfile = open('stim_times.csv','w')
+lickfile = open('lick_times.csv','w')
 
-initialize = False
-
-with torch.no_grad():
-    ret = True
-    while ret:
-        ret, img = cap.read()
-        if not initialize:
-            stim = False
-            stimmer = isstim.Stimmer(img)
-            initialize = True
-        else:
-            stim = stimmer.isStim(img)
-        disp = img
-        #ts = (cap.get(cv.CAP_PROP_POS_MSEC))
-        stimorg = (0, 320)
-        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        img = torch.from_numpy(img)
-        img = img.permute(2, 0, 1)
-        img = img.float() / 255.0
-        imga = imtransfor(img)
-        imga = imga.unsqueeze(0) 
-        temp = net(imga)
-        _, predicted = torch.max(temp, 1)
-        #print(predicted)
-        pred = predicted.item()
-        #print(ts)
-        if pred  == 0:
-            text = "NOT LICKING"
-        else:
-            text = "LICKING"
-        if stim:
-            stimtext = "STIMMING"
-        else:
-            stimtext = "NOT STIMMING"
-        disp = cv.putText(disp, text, org, font, 
-                   fontscale, color, thickness, cv.LINE_AA)
-        disp = cv.putText(disp, stimtext, stimorg, font, 
-                   fontscale, color, thickness, cv.LINE_AA)
-        cv.imshow('Licking',disp)
-        writer.write(disp)
-        if cv.waitKey(1) == ord('q'):
-            break
-    cap.release()
-    writer.release()
-    cv.destroyAllWindows()
+for a in os.listdir('inputvids'):
+    title = a.replace('.mp4','_annotated.mp4')
+    count +=1
+    full_path = os.path.join('inputvids', a)
+    cap = cv.VideoCapture(full_path)
+    fourcc = cv.VideoWriter_fourcc(*"XVID")
+    fps = int(cap.get(cv.CAP_PROP_FPS))
+    width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+    writer = cv.VideoWriter(title, fourcc,fps, (width, height))
+    stimtimes = []
+    licktimes = []
+    initialize = False
+    print(f"NOW PROCESSING {a}")
+    with torch.no_grad():
+        ret = True
+        while ret:
+            ret, img = cap.read()
+            if not ret or img is None:
+                break
+            if not initialize:
+                stim = False
+                stimmer = isstim.Stimmer(img)
+                initialize = True
+            else:
+                stim = stimmer.isStim(img)
+            disp = img
+            ts = (cap.get(cv.CAP_PROP_POS_MSEC))
+            stimorg = (0, 320)
+            img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+            img = torch.from_numpy(img)
+            img = img.permute(2, 0, 1)
+            img = img.float() / 255.0
+            imga = imtransfor(img)
+            imga = imga.unsqueeze(0) 
+            temp = net(imga)
+            _, predicted = torch.max(temp, 1)
+            pred = predicted.item()
+            if pred  == 0:
+                text = "NOT LICKING"
+            else:
+                text = "LICKING"
+                licktimes.append(ts)
+            if stim:
+                stimtext = "STIMMING"
+                stimtimes.append(ts)
+            else:
+                stimtext = "NOT STIMMING"
+            disp = cv.putText(disp, text, org, font, 
+                    fontscale, color, thickness, cv.LINE_AA)
+            disp = cv.putText(disp, stimtext, stimorg, font, 
+                    fontscale, color, thickness, cv.LINE_AA)
+            #cv.imshow('Licking',disp)
+            writer.write(disp)
+            #if cv.waitKey(1) == ord('q'):
+            #    break
+        print(f"DONE WITH {a}")
+        cap.release()
+        writer.release()
+        cv.destroyAllWindows()
+    lickfile.write(f"{a}," + ','.join(map(str, licktimes)) + "\n")
+    stimfile.write(f"{a}," + ','.join(map(str, stimtimes)) + "\n")

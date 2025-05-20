@@ -47,7 +47,7 @@ class createDataset(Dataset):
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.dropout = .1
+        self.dropout = .5
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout1 = nn.Dropout(self.dropout)
@@ -102,7 +102,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=0.0001)
 
 
-for epoch in range(25):  # loop over the dataset multiple times
+for epoch in range(30):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(lick_dataloader, 0):
@@ -133,7 +133,7 @@ for epoch in range(25):  # loop over the dataset multiple times
     print(f'Accuracy: {100 * correct / total}% on cycle {epoch}')
     print(f'Predicted class distribution: {class_counts}')
 
-PATH = './licktrain3.pth'
+PATH = './licktrain4.pth'
 torch.save(net.state_dict(), PATH)
 
 

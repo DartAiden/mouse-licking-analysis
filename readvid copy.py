@@ -13,27 +13,9 @@ from torchvision.io import read_image
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from sklearn.utils.class_weight import compute_class_weight
+import cv2 as cv
 
 
-class createDataset(Dataset):
-    def __init__(self, data, labels):
-        self.labels = pd.read_csv(labels)
-        self.data = data
-        self.transform = transforms.Compose([
-        transforms.CenterCrop((960, 700)), 
-        transforms.Resize((224, 224)),
-    ])
-    def __len__(self):
-        return len(self.labels)
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.data, self.labels.iloc[idx, 0])
-        image = read_image(img_path).float() / 255.0 
-        label = self.labels.iloc[idx,1]
-        image = self.transform(image)
-        return image,label
-    
 class createDataset(Dataset):
     def __init__(self, data, labels):
         self.labels = pd.read_csv(labels)
@@ -51,7 +33,6 @@ class createDataset(Dataset):
         image = self.transform(image)
         return image,label
     
-
 
 class Net(nn.Module):
     def __init__(self):
@@ -88,34 +69,32 @@ class Net(nn.Module):
 
         x = self.fc4(x)
         return x
-
-licklabels = 'lick_annotations_2.csv'
-lickdir = r'C:\Users\adart\Documents\mouse-licking-analysis\licking_combined'
-lickdataset = createDataset(lickdir, licklabels)
-
-lick_dataloader = DataLoader(lickdataset, batch_size=64, shuffle=True)
-
-net = Net()
+PATH = './licktrain.pth'
+net= Net()
+net.load_state_dict(torch.load(PATH, weights_only=True))
 net.eval()
-PATH  = './licktrain.pth'
 
-net.load_state_dict(torch.load(PATH))
-correct = 0
-total = 0
-count = 0
-# since we're not training, we don't need to calculate the gradients for our outputs
+lickpoints = []
+imtransfor = transforms.Compose([
+        transforms.CenterCrop(size = 400), 
+        transforms.Resize((224, 224)),
+    ])
 
+
+cap = cv.VideoCapture('testvid.mp4')
 with torch.no_grad():
-    for data in lick_dataloader:
-        if count < 2000:
-            count +=1
-            images, labels = data
-            # calculate outputs by running images through the network
-            outputs = net(images)
-            # the class with the highest energy is what we choose as prediction
-            _, predicted = torch.max(outputs, 1)
-            print(predicted)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-print(f'Accuracy of the network on the test images: {100 * correct / total} %')
+    ret = True
+    while ret:
+        ret, img = cap.read()
+        ts = (cap.get(cv.CAP_PROP_POS_MSEC))
+        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+        img = torch.from_numpy(img)
+        img = img.permute(2, 0, 1)
+        img = img.float() / 255.0
+        imga = imtransfor(img)
+        imga = imga.unsqueeze(0) 
+        temp = net(imga)
+        _, predicted = torch.max(temp, 1)
+        print(predicted)
+        print(predicted.item())
+        print(ts)

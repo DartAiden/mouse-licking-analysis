@@ -7,4 +7,4 @@ class Stimmer():
 
     def isStim(self, image:np.ndarray):
         b = image[:,:,0]
-        return self.bench < .95*np.sum(b)
+        return self.bench < .96*np.sum(b)

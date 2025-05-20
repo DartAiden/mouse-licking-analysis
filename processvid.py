@@ -1,7 +1,8 @@
 import cv2 as cv
-cap = cv.VideoCapture('testvid4.mp4')
+cap = cv.VideoCapture('mouse_crop_video.mp4')
 status = 1
-count = 9000
+count = 24000
 while status == 1:
     status, im = cap.read()
-    print(type(im))
+    cv.imwrite(f'{count}.jpg',im)
+    count+=1
