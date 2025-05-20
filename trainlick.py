@@ -106,13 +106,8 @@ for epoch in range(30):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(lick_dataloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
-
-        # zero the parameter gradients
         optimizer.zero_grad()
-
-        # forward + backward + optimize
         outputs = net(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
