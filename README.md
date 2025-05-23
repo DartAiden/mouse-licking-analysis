@@ -7,8 +7,6 @@ A graph of the time series, with the cross-correlations labeled.
 
 ![alt text](https://github.com/DartAiden/mouse-licking-analysis/blob/main/final_data/figures_stim.png "Figure stim")
 
-One of the raw videos showing the mouse stimulation. 
-
 #Citations
 Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J., Chanan, G., … Chintala, S. (2019). PyTorch: An Imperative Style, High-Performance Deep Learning Library. _In Advances in Neural Information Processing Systems_ 32 (pp. 8024–8035). Curran Associates, Inc. Retrieved from http://papers.neurips.cc/paper/9015-pytorch-an-imperative-style-high-performance-deep-learning-library.pdf 
 Hunter, J. D. (2007). Matplotlib: A 2D graphics environment. _Computing in Science & Engineering_, 9(3), 90-95.
