@@ -91,7 +91,7 @@ count = 0
 
 title = "annotatedvid.mp4"
 count +=1
-full_path =r"C:\Users\adart\Documents\mouse-licking-analysis\mouse_crop_video.mp4"
+full_path =r"inputvids\T51_250429_lick_Video_CROP.mp4"
 
 cap = cv.VideoCapture(full_path)
 fourcc = cv.VideoWriter_fourcc(*"XVID")

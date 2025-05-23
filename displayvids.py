@@ -70,7 +70,7 @@ class Net(nn.Module):
 
         x = self.fc4(x)
         return x
-PATH = './licktrain3.pth'
+PATH = './licktrain5.pth'
 net= Net()
 net.load_state_dict(torch.load(PATH, weights_only=True))
 net.eval()
@@ -102,11 +102,14 @@ for a in os.listdir('inputvids'):
     width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
     writer = cv.VideoWriter(title, fourcc,fps, (width, height))
-    stimtimes = []
-    licktimes = []
+
     initialize = False
     print(f"NOW PROCESSING {a}")
     with torch.no_grad():
+        stimtimes = []
+        licktimes = []
+        licks = []
+        stims = []
         ret = True
         while ret:
             ret, img = cap.read()
@@ -119,7 +122,7 @@ for a in os.listdir('inputvids'):
             else:
                 stim = stimmer.isStim(img)
             disp = img
-            ts = (cap.get(cv.CAP_PROP_POS_MSEC))
+            ts = (cap.get(cv.CAP_PROP_POS_MSEC))/1000
             stimorg = (0, 320)
             img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
             img = torch.from_numpy(img)
@@ -132,14 +135,20 @@ for a in os.listdir('inputvids'):
             pred = predicted.item()
             if pred  == 0:
                 text = "NOT LICKING"
+                licktimes.append(ts)
+                licks.append(0)
             else:
                 text = "LICKING"
+                licks.append(1)
                 licktimes.append(ts)
             if stim:
                 stimtext = "STIMMING"
                 stimtimes.append(ts)
+                stims.append(1)
             else:
                 stimtext = "NOT STIMMING"
+                stimtimes.append(ts)
+                stims.append(0)
             disp = cv.putText(disp, text, org, font, 
                     fontscale, color, thickness, cv.LINE_AA)
             disp = cv.putText(disp, stimtext, stimorg, font, 
@@ -152,5 +161,12 @@ for a in os.listdir('inputvids'):
         cap.release()
         writer.release()
         cv.destroyAllWindows()
-    lickfile.write(f"{a}," + ','.join(map(str, licktimes)) + "\n")
-    stimfile.write(f"{a}," + ','.join(map(str, stimtimes)) + "\n")
+    lickdf = pd.DataFrame({"Times" : licktimes, "Lick_Signal" : licks})
+    stimdf = pd.DataFrame({"Times" : stimtimes, "Stim_Signal" : stims})
+    completedf = pd.DataFrame({"Times" : licktimes, "Lick_Signal" : licks, "Stim_Signal" : stims})
+    licktitle = a.replace('.mp4',"_licks.csv")
+    stimtile = a.replace('.mp4','_stims.csv')
+    completetitle = a.replace('.mp4','_complete.csv')
+    lickdf.to_csv(licktitle, index = False)
+    stimdf.to_csv(stimtile, index = False)
+    completedf.to_csv(completetitle, index=False)

@@ -83,7 +83,7 @@ class Net(nn.Module):
 
 net = Net()
 
-licklabels = 'annotations_3_training.csv'
+licklabels = 'annotations.csv'
 lickdir = r'C:\Users\adart\Documents\mouse-licking-analysis\licking_combined'
 lickdataset = createDataset(lickdir, licklabels)
 
@@ -128,7 +128,7 @@ for epoch in range(30):  # loop over the dataset multiple times
     print(f'Accuracy: {100 * correct / total}% on cycle {epoch}')
     print(f'Predicted class distribution: {class_counts}')
 
-PATH = './licktrain4.pth'
+PATH = './licktrain5.pth'
 torch.save(net.state_dict(), PATH)
 
 
@@ -136,15 +136,12 @@ net.load_state_dict(torch.load(PATH, weights_only=True))
 correct = 0
 total = 0
 count = 0
-# since we're not training, we don't need to calculate the gradients for our outputs
 with torch.no_grad():
     for data in lick_dataloader:
         if count < 1000:
             count +=1
             images, labels = data
-            # calculate outputs by running images through the network
             outputs = net(images)
-            # the class with the highest energy is what we choose as prediction
             _, predicted = torch.max(outputs, 1)
             print(predicted)
             total += labels.size(0)
