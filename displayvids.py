@@ -17,23 +17,10 @@ import cv2 as cv
 import isstim
 import os
 
-class createDataset(Dataset):
-    def __init__(self, data, labels):
-        self.labels = pd.read_csv(labels)
-        self.data = data
-        self.transform = transforms.Compose([
-        transforms.CenterCrop(size = 400), 
-        transforms.Resize((224, 224)),
-    ])
-    def __len__(self):
-        return len(self.labels)
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.data, self.labels.iloc[idx, 0])
-        image = read_image(img_path).float() / 255.0 
-        label = int(self.labels.iloc[idx,1])
-        image = self.transform(image)
-        return image,label
-    
+
+"""
+This script is used for processing the videos. 
+"""
 
 class Net(nn.Module):
     def __init__(self):
@@ -86,30 +73,22 @@ fontscale = 1
 color= (0,0,0)
 thickness = 2
 
-count = 0
-
-
-stimfile = open('stim_times.csv','w')
-lickfile = open('lick_times.csv','w')
 
 for a in os.listdir('inputvids'):
     title = a.replace('.mp4','_annotated.mp4')
-    count +=1
     full_path = os.path.join('inputvids', a)
     cap = cv.VideoCapture(full_path)
     fourcc = cv.VideoWriter_fourcc(*"XVID")
     fps = int(cap.get(cv.CAP_PROP_FPS))
     width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-    writer = cv.VideoWriter(title, fourcc,fps, (width, height))
-
+    writer = cv.VideoWriter(title, fourcc,fps, (width, height)) #Open up new video to save the annotated videos
     initialize = False
     print(f"NOW PROCESSING {a}")
     with torch.no_grad():
-        stimtimes = []
-        licktimes = []
+        times = [] #Record times for all frames for lick and stimuli - these two lists should be the same
         licks = []
-        stims = []
+        stims = [] #Record whether 
         ret = True
         while ret:
             ret, img = cap.read()
@@ -118,38 +97,35 @@ for a in os.listdir('inputvids'):
             if not initialize:
                 stim = False
                 stimmer = isstim.Stimmer(img)
-                initialize = True
+                initialize = True #Extract the blue channel for benchmark
             else:
-                stim = stimmer.isStim(img)
+                stim = stimmer.isStim(img) #Evaluate
             disp = img
-            ts = (cap.get(cv.CAP_PROP_POS_MSEC))/1000
+            ts = (cap.get(cv.CAP_PROP_POS_MSEC))/1000 #Extract the timestamp in milliseconds
             stimorg = (0, 320)
-            img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-            img = torch.from_numpy(img)
-            img = img.permute(2, 0, 1)
-            img = img.float() / 255.0
-            imga = imtransfor(img)
-            imga = imga.unsqueeze(0) 
-            temp = net(imga)
-            _, predicted = torch.max(temp, 1)
-            pred = predicted.item()
+            img = cv.cvtColor(img, cv.COLOR_BGR2RGB) #Rearrange the color channels
+            img = torch.from_numpy(img) #Turn the numpy array into a torch tensor
+            img = img.permute(2, 0, 1) #Rearrange all channels
+            img = img.float() / 255.0 #Normalize
+            imga = imtransfor(img) #Perform the relevant transformations
+            imga = imga.unsqueeze(0) #Add a new dimension to position 0, to have it be a batch of one
+            temp = net(imga) #Insert it into the neural network
+            _, predicted = torch.max(temp, 1) #Find the predicted value
+            pred = predicted.item() #Extract it
             if pred  == 0:
-                text = "NOT LICKING"
-                licktimes.append(ts)
+                text = "NOT LICKING" #annotate the frame appropriately
                 licks.append(0)
             else:
                 text = "LICKING"
                 licks.append(1)
-                licktimes.append(ts)
             if stim:
                 stimtext = "STIMMING"
-                stimtimes.append(ts)
                 stims.append(1)
             else:
                 stimtext = "NOT STIMMING"
-                stimtimes.append(ts)
                 stims.append(0)
-            disp = cv.putText(disp, text, org, font, 
+            times.append(ts)
+            disp = cv.putText(disp, text, org, font, #Insert the annotation over the image
                     fontscale, color, thickness, cv.LINE_AA)
             disp = cv.putText(disp, stimtext, stimorg, font, 
                     fontscale, color, thickness, cv.LINE_AA)
@@ -161,12 +137,6 @@ for a in os.listdir('inputvids'):
         cap.release()
         writer.release()
         cv.destroyAllWindows()
-    lickdf = pd.DataFrame({"Times" : licktimes, "Lick_Signal" : licks})
-    stimdf = pd.DataFrame({"Times" : stimtimes, "Stim_Signal" : stims})
-    completedf = pd.DataFrame({"Times" : licktimes, "Lick_Signal" : licks, "Stim_Signal" : stims})
-    licktitle = a.replace('.mp4',"_licks.csv")
-    stimtile = a.replace('.mp4','_stims.csv')
+    completedf = pd.DataFrame({"Times" : times, "Lick_Signal" : licks, "Stim_Signal" : stims}) #Write out the file
     completetitle = a.replace('.mp4','_complete.csv')
-    lickdf.to_csv(licktitle, index = False)
-    stimdf.to_csv(stimtile, index = False)
     completedf.to_csv(completetitle, index=False)

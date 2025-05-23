@@ -5,22 +5,20 @@ import seaborn as sns
 import os
 import math
 
+
+
 def mean(arr):
     return sum(arr) / len(arr)
 def cross_correlation(x, y):
-    x_mean = mean(x)
-    y_mean = mean(y)
-    numerator = sum((a - x_mean) * (b - y_mean) for a, b in zip(x, y))
-    x_sq_diff = sum((a - x_mean) ** 2 for a in x)
-    y_sq_diff = sum((b - y_mean) ** 2 for b in y)
-    denominator = math.sqrt(x_sq_diff * y_sq_diff)
-    if denominator == 0:
+    xmean = mean(x)
+    ymean = mean(y)
+    denom = (sum((a - xmean) ** 2 for a in x) * sum((b - ymean) ** 2 for b in y))**.5
+    if denom == 0:
         return 'N/A'
     else:
-        correlation = numerator / denominator
-        return correlation
+        cross_correlation = sum((x1 - xmean) * (y1 - ymean) for x1, y1 in zip(x, y)) / denom
+        return cross_correlation
 
-open('.gitignore','w')
 
 fig2,ax2 = plt.subplots(4,4, figsize = (60,16))
 
