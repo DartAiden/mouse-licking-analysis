@@ -16,8 +16,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.utils.class_weight import compute_class_weight
 
+"""
+This file is to train the neural network. It is based on PyTorch's tutorial for CNNs, with some modifications. 
+"""
+
+
 def imshow(img):
-    img = img / 2 + 0.5     # unnormalize
+    img = img / 2 + 0.5
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()
@@ -30,7 +35,7 @@ class createDataset(Dataset):
         transforms.CenterCrop(size = 400), 
         transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation = .1),
         transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
-        transforms.Resize((224, 224)),
+        transforms.Resize((224, 224)), #Transforms to help reduce overfitting and increase adaptability to new footage
         
     ])
     def __len__(self):
@@ -50,9 +55,9 @@ class Net(nn.Module):
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout1 = nn.Dropout(self.dropout)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.dropout2 = nn.Dropout(self.dropout)
-        dummy_input = torch.zeros(1, 3, 224, 224)
+        self.conv2 = nn.Conv2d(6, 16, 5) 
+        self.dropout2 = nn.Dropout(self.dropout)  #Dropout layers to reduce overfitting
+        dummy_input = torch.zeros(1, 3, 224, 224) #Approximate size of region of interest from the dataset
 
         x = self.pool(F.relu(self.conv1(dummy_input)))
         x = self.dropout1(x)
@@ -81,10 +86,8 @@ net = Net()
 
 licklabels = 'annotations.csv'
 lickdir = r'C:\Users\adart\Documents\mouse-licking-analysis\licking_combined'
-lickdataset = createDataset(lickdir, licklabels)
-
-
-lick_dataloader = DataLoader(lickdataset, batch_size=32, shuffle=True)
+lickdataset = createDataset(lickdir, licklabels) #Create dataset from the directory
+lick_dataloader = DataLoader(lickdataset, batch_size=32, shuffle=True) #Load it in batches of 32, shuffling, to help maintain some degree of randomness and reduce bias
 dataiter = iter(lick_dataloader)
 images, labels = next(dataiter)
 imlabels = []
@@ -94,30 +97,30 @@ imlabels = []
 #class_weights = torch.tensor(class_weights, dtype=torch.float)
 #print(' '.join(f'{labels[j]}' for j in range(64)))
 #imshow(torchvision.utils.make_grid(images))
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(net.parameters(), lr=0.0001)
+criterion = nn.CrossEntropyLoss() 
+optimizer = torch.optim.Adam(net.parameters(), lr=0.0001) #Adam to help with the smaller dataset
 
 
-for epoch in range(30):  # loop over the dataset multiple times
+for epoch in range(30):  #I found that it plateaus around 20 iterations, but I raised the number of epochs to 30 just to be safe
 
     running_loss = 0.0
     for i, data in enumerate(lick_dataloader, 0):
-        inputs, labels = data
-        optimizer.zero_grad()
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+        inputs, labels = data #Extract data
+        optimizer.zero_grad() #Zero gradients
+        outputs = net(inputs) #Run it through the neural network
+        loss = criterion(outputs, labels) #Run it through the optimizer
+        loss.backward() #Compute the loss
+        optimizer.step() #Peform optimization step
     correct = 0
     total = 0
     class_counts = [0, 0]
-    with torch.no_grad():
+    with torch.no_grad(): #Determine accuracy
         for data in lick_dataloader:
-            images, labels = data
-            outputs = net(images)
+            images, labels = data 
+            outputs = net(images) 
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            correct += (predicted == labels).sum().item() #Find the total number where it is correct
             for p in predicted:
                 class_counts[p] += 1
 
@@ -127,7 +130,6 @@ for epoch in range(30):  # loop over the dataset multiple times
 PATH = './licktrain5.pth'
 torch.save(net.state_dict(), PATH)
 
-
 net.load_state_dict(torch.load(PATH, weights_only=True))
 correct = 0
 total = 0
@@ -136,7 +138,7 @@ with torch.no_grad():
     for data in lick_dataloader:
         if count < 1000:
             count +=1
-            images, labels = data
+            images, labels = data #Final testing once again
             outputs = net(images)
             _, predicted = torch.max(outputs, 1)
             print(predicted)
