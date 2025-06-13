@@ -20,14 +20,15 @@ def cross_correlation(x, y):
         return cross_correlation
 
 
-fig2,ax2 = plt.subplots(4,4, figsize = (60,16))
+fig2,ax2 = plt.subplots(3,3, figsize = (60,16))
 
 x = 0
 y = 0
 
-for a in os.listdir('final_data\complete_ts'):
+currdir = "20hz_ts"
+for a in os.listdir(currdir):
     title = a.split('_')[0]
-    a = os.path.join(('final_data\complete_ts'),a)
+    a = os.path.join((currdir),a)
     df = pd.read_csv(a)
     ax = ax2[x,y]
     ax.plot(df['Times'],df['Lick_Signal'], label = "Lick frames", color = "#f5474d", linewidth = .25)
@@ -40,14 +41,11 @@ for a in os.listdir('final_data\complete_ts'):
     ax.set_xlabel('Time')
     ax.set_ylabel('Signal')
     x+=1
-    if x ==4:
+    if x ==3:
         x = 0
         y+=1
     if x == 3 and y == 3:
         ax.legend()
-fig2.delaxes(ax2.flatten()[11])
-fig2.delaxes(ax2.flatten()[15])
-fig2.delaxes(ax2.flatten()[7])
 plt.subplots_adjust(wspace=0.4, hspace=0.6)
 handles, labels = ax2[0, 0].get_legend_handles_labels()
 fig2.legend(handles, labels, loc='lower right', bbox_to_anchor=(0.9, 0.1), fontsize=14)

@@ -38,6 +38,7 @@ class createDataset(Dataset):
         transforms.Resize((224, 224)), #Transforms to help reduce overfitting and increase adaptability to new footage
         
     ])
+        
     def __len__(self):
         return len(self.labels)
     def __getitem__(self, idx):
@@ -51,7 +52,7 @@ class Net(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.dropout = .5
+        self.dropout = .3
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout1 = nn.Dropout(self.dropout)
@@ -97,9 +98,8 @@ imlabels = []
 #class_weights = torch.tensor(class_weights, dtype=torch.float)
 #print(' '.join(f'{labels[j]}' for j in range(64)))
 #imshow(torchvision.utils.make_grid(images))
-criterion = nn.CrossEntropyLoss() 
+criterion = nn.CrossEntropyLoss(weight = torch.tensor([1,1.5])) 
 optimizer = torch.optim.Adam(net.parameters(), lr=0.0001) #Adam to help with the smaller dataset
-
 
 for epoch in range(30):  #I found that it plateaus around 20 iterations, but I raised the number of epochs to 30 just to be safe
 
@@ -127,7 +127,7 @@ for epoch in range(30):  #I found that it plateaus around 20 iterations, but I r
     print(f'Accuracy: {100 * correct / total}% on cycle {epoch}')
     print(f'Predicted class distribution: {class_counts}')
 
-PATH = './licktrain5.pth'
+PATH = './licktrain8.pth'
 torch.save(net.state_dict(), PATH)
 
 net.load_state_dict(torch.load(PATH, weights_only=True))
